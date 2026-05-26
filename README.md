@@ -72,12 +72,6 @@ horizonxi-wine-fixes/
     └── README.md                  ← monitor instructions
 ```
 
-## What's NOT in this bundle (intentional)
-
-- **Anti-cheat bypass / anything privacy-sensitive.** These fixes only address Wine compatibility, not game logic.
-- **Modifications to FFXi.dll / FFXiMain.dll / polcore.dll.** Those are SquareEnix-signed; HorizonXI may integrity-check them. We don't touch them.
-- **Generic "ricer" tweaks.** Every change here addresses a specific, identified bug. No cargo culting.
-
 ## Caveats
 
 - Tested on **CachyOS + Proton-11.0-1-beta2 (and earlier GE-Proton10-34) + Faugus**. Other Linux distros / Mesa drivers / Wine forks may behave differently but the underlying bug classes apply broadly.
