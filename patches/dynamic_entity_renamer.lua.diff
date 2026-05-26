@@ -1,0 +1,95 @@
+--- "a/dynamic_entity_renamer.lua.bak_original"	2026-05-24 13:55:48.293516755 -0700
++++ "a/dynamic_entity_renamer.lua"	2026-05-24 17:17:24.925550435 -0700
+@@ -232,7 +232,27 @@
+ 				-- 0x100 offset may change if pets + trusts + dynamic entities all share the same space
+ 			elseif isAshitav4 then
+ 				local targid = bit.band(id, 0x0FFF)
+-				AshitaCore:GetMemoryManager():GetEntity():SetName(targid, new_name)
++				local entity = AshitaCore:GetMemoryManager():GetEntity()
++				-- Defense in depth against Wine-side AV storm (Windows tolerates the
++				-- same accesses via LFH; Wine's strict memory layout faults). Each
++				-- caught AV grows the unwind function table, slowly leaking 32-bit VA.
++				-- Skip if entity slot is empty/despawned.
++				if entity:GetActorPointer(targid) == 0 then
++					return
++				end
++				-- Skip if entity isn't fully spawned. Catches mid-initialization
++				-- states (BC mob spawn, busy-zone NPC stream-in) that pass the
++				-- ActorPointer check but have inconsistent inner state.
++				if entity:GetSpawnFlags(targid) == 0 then
++					return
++				end
++				-- Skip if current name already matches; avoids redundant writes 60x/sec.
++				if entity:GetName(targid) == new_name then
++					return
++				end
++				-- Wrap in pcall as last-resort guard. Any error becomes a swallowed
++				-- Lua error instead of a caught C++ exception that retries every frame.
++				pcall(function() entity:SetName(targid, new_name) end)
+ 			end
+ 		end
+ 	end
+@@ -280,7 +300,37 @@
+     end
+ end
+ 
++-- Throttle render() to ~10 Hz instead of 60+. Names don't need 60 Hz refresh;
++-- this cuts the per-frame iteration cost (and any residual AV exposure) by 6x
++-- with no visible difference.
++local last_render = 0
++local render_interval = 0.1  -- seconds
++
++-- Zone-change settle: skip work for 1s after GetIsZoning() flips back to 0.
++-- During zoning the entity table is torn down; after zoning, the new zone's
++-- entities are still streaming in and have inconsistent state for a moment.
++-- This is the largest residual source of Wine-side AVs in entity-touching code.
++local zoning_settle_until = 0
++local function in_zoning_settle()
++    if isAshitav4 then
++        if AshitaCore:GetMemoryManager():GetPlayer():GetIsZoning() ~= 0 then
++            zoning_settle_until = os.clock() + 1.0  -- refresh while zoning
++            return true
++        end
++    end
++    return os.clock() < zoning_settle_until
++end
++
+ local function render()
++    if in_zoning_settle() then
++        return
++    end
++    local now = os.clock()
++    if now - last_render < render_interval then
++        return
++    end
++    last_render = now
++
+     local zoneId = getZoneId()
+     if registry[zoneId] then
+         for k, v in pairs(registry[zoneId]) do
+@@ -298,7 +348,9 @@
+ 	local nameflag = 0x08
+ 	
+ 	-- check if flags contain rename flag and is in "dynamic entity" range
+-	if bit.band(flags, nameflag) and targid >= 0x700 then
++	-- NOTE: bit.band returns a number; in Lua 0 is truthy, so we MUST compare ~= 0
++	-- or every entity in the dynamic range gets registered, polluting the registry.
++	if bit.band(flags, nameflag) ~= 0 and targid >= 0x700 then
+ 		local zoneId = getZoneId()
+ 		local fullid = 0x1000000 + bit.lshift(zoneId, 12) + targid
+ 
+@@ -343,6 +395,14 @@
+ 			register_dynamic_entity(e.data)
+ 		elseif e.id == 0x1FF then
+             handleList(e.id, e.data:sub(5))
++        elseif e.id == 0x0B then
++            -- Zone leave: clear the dynamic-entity registry for the zone we're
++            -- leaving. Without this, transient BC/event entities accumulate
++            -- forever, growing the per-frame iteration in render().
++            local zoneId = getZoneId()
++            if zoneId and registry[zoneId] then
++                registry[zoneId] = {}
++            end
+         end
+     end)
+     ashita.events.register('d3d_beginscene', 'beginscene_cb', function()

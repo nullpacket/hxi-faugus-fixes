@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.\#*
+\#*\#
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build / packaging artifacts
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+dist/
+build/
+
+# Local scratch / experimentation
+scratch/
+TODO.local.md
+.envrc
+.direnv/
+
+# Backups created by our own tooling on patched files
+*.bak_original
+*.bak_no_laa
+*.bak_winebuiltin

@@ -1,0 +1,21 @@
+d3d8.dll
+========
+
+This is the unmodified d3d8to9 v1.15.1 release by crosire.
+
+Project:    https://github.com/crosire/d3d8to9
+Release:    https://github.com/crosire/d3d8to9/releases/tag/v1.15.1
+File:       https://github.com/crosire/d3d8to9/releases/download/v1.15.1/d3d8.dll
+MD5:        f18148b1bc580a7b1f0df1f055782c31
+SHA-256:    (verify yourself if needed: sha256sum d3d8.dll)
+Size:       124416 bytes
+License:    See LICENSE in upstream repository (BSD-style)
+
+If you do not want to trust the bundled binary, download it yourself from
+the URL above and verify the MD5 matches.
+
+Why d3d8to9 (and not DXVK's d3d8): DXVK's d3d8 is included in recent Proton
+releases (enabled via PROTON_DXVK_D3D8=1) but causes a privileged-instruction
+crash within ~30 minutes for FFXI/Ashita — likely a timing incompatibility
+with Ashita's d3d_present hooks. d3d8to9 (which translates D3D8 calls to
+D3D9 so DXVK's d3d9 backend can handle them) is stable for FFXI.
