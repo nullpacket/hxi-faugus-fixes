@@ -1,5 +1,21 @@
 # HorizonXI Wine Stability Fixes
 
+## Read this first
+
+**Nothing here has been reviewed, endorsed, or sanctioned by the HorizonXI team.** This is an unaffiliated, community-made collection of changes by one player who wanted their client to stop crashing on Linux. It is not official, not supported by HorizonXI, and not supported by the Ashita, Faugus, Proton, DXVK, or d3d8to9 projects either.
+
+**Use it at your own risk.**
+
+- **Results will vary with your setup.** This was developed and tested on one machine — CachyOS, NVIDIA, Faugus, Proton-11.0-1-beta2. Different distros, GPUs, drivers, Wine forks, launchers, or HorizonXI versions may behave differently, or may not need these fixes at all.
+- **It modifies your game install.** The steps patch a client executable, replace a system DLL inside your Wine prefix, and edit a HorizonXI-distributed addon. Every step is reversible and documented, but you are changing files the launcher expects to own.
+- **I am not responsible for the outcome.** If your game stops launching, your install breaks, your prefix needs rebuilding, you lose progress, or your account is actioned or banned — that is on you, not on me. Back up anything you care about before you start.
+- **Read `patches/ADDON-REVIEW.md` before you run the addon patch.** It documents exactly what that change does and does not affect. It is written so that you — or a server admin — can judge it for yourself rather than take my word for it. Whether running a modified copy of a server-distributed addon is acceptable is **HorizonXI's call, not mine**, and they have not made one.
+- **If in doubt, ask HorizonXI staff first.** If they say don't, then don't — and please [open an issue](../../issues) so this repository can be corrected or taken down.
+
+No warranty of any kind is offered; see [LICENSE](LICENSE).
+
+---
+
 A set of fixes that takes HorizonXI on Linux (Faugus/Proton) from **crashing every 30–60 minutes** to **multi-hour stable sessions including meriting parties** — without changing your client install or addon loadout.
 
 All fixes are minimal, reversible, and target the actual root causes rather than working around them.
