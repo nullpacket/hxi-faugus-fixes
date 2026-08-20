@@ -1,0 +1,62 @@
+{
+  "_comment": [
+    "Copy this file to restore-config.json (gitignored) and edit for your install.",
+    "Every section is optional - delete what you do not want restored.",
+    "Credentials are stored in plaintext here, exactly as ashita.ini stores them;",
+    "keep the file mode at 600 and do not commit it."
+  ],
+
+  "game_dir": "~/Games/faugus/horizonxi/drive_c/Program Files/HorizonXI/Game",
+
+  "pivot_root_path": "C:\\Program Files\\HorizonXI\\Game\\polplugins\\DATs",
+
+  "sandbox_interface_bypass": true,
+
+  "autologin": {
+    "server": "play.horizonxi.com",
+    "username": "YOUR_USERNAME",
+    "password": "YOUR_PASSWORD",
+    "otp": ""
+  },
+
+  "registry": {
+    "0001": "3840",
+    "0002": "2160",
+    "0003": "3820",
+    "0004": "2160",
+    "0011": "0",
+    "0021": "1",
+    "0034": "2",
+    "0037": "2550",
+    "0038": "1440"
+  },
+
+  "plugins": [
+    "addons",
+    "screenshot",
+    "HardwareMouse",
+    "Minimap",
+    "Nameplate",
+    "PacketFlow",
+    "sequencer",
+    "thirdparty"
+  ],
+
+  "addons": [
+    "dynamic_entity_renamer",
+    "allmaps",
+    "aspect",
+    "cfhblock",
+    "config",
+    "craftmon",
+    "distance",
+    "drawdistance",
+    "enternity",
+    "equipmon",
+    "fps",
+    "luashitacast",
+    "macrofix",
+    "timestamp",
+    "tparty"
+  ]
+}

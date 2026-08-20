@@ -7,15 +7,27 @@ Project:    https://github.com/crosire/d3d8to9
 Release:    https://github.com/crosire/d3d8to9/releases/tag/v1.15.1
 File:       https://github.com/crosire/d3d8to9/releases/download/v1.15.1/d3d8.dll
 MD5:        f18148b1bc580a7b1f0df1f055782c31
-SHA-256:    (verify yourself if needed: sha256sum d3d8.dll)
+SHA-256:    ab6bf7a9a9f4b3e66a75ca038d8d10289c88acbfe8d52c3b5a8a9a259cb26cd5
 Size:       124416 bytes
-License:    See LICENSE in upstream repository (BSD-style)
+License:    See LICENSE in the upstream repository (BSD-style)
 
-If you do not want to trust the bundled binary, download it yourself from
-the URL above and verify the MD5 matches.
+If you do not want to trust the bundled binary, download it yourself from the
+URL above and verify the checksums.
 
-Why d3d8to9 (and not DXVK's d3d8): DXVK's d3d8 is included in recent Proton
-releases (enabled via PROTON_DXVK_D3D8=1) but causes a privileged-instruction
-crash within ~30 minutes for FFXI/Ashita — likely a timing incompatibility
-with Ashita's d3d_present hooks. d3d8to9 (which translates D3D8 calls to
-D3D9 so DXVK's d3d9 backend can handle them) is stable for FFXI.
+Still current: v1.15.1 (released 2026-03-07) was re-confirmed as the latest
+upstream release in August 2026. If a newer release appears, it should be a
+drop-in replacement -- update the expected md5 in scripts/verify-install.py and
+monitor/horizonxi-monitor.py (or set HXI_MONITOR_D3D8TO9_MD5) if you swap it.
+
+Why d3d8to9 and not DXVK's d3d8: DXVK's d3d8 ships with recent Proton (enabled
+via PROTON_DXVK_D3D8=1) but causes a privileged-instruction crash at
+0x7a2c3ffc within ~30 minutes for FFXI/Ashita -- a different crash class from
+the OOM this bundle fixes, and likely a timing incompatibility with Ashita's
+d3d_present / d3d_beginscene hooks. Tested and confirmed bad. d3d8to9, which
+translates D3D8 calls to D3D9 so DXVK's d3d9 backend handles them, is stable.
+
+Note that installing this the "official" way -- placing d3d8.dll next to the
+game exe with WINEDLLOVERRIDES=d3d8=n,b -- does NOT work under Proton. Proton
+copies Wine's builtin d3d8 into drive_c/windows/syswow64 on every launch, and
+that copy wins the search-order race. That is why the bat wrapper exists; see
+INSTALL.md step 2-3.

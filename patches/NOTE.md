@@ -2,55 +2,88 @@
 
 ## dynamic_entity_renamer.lua
 
-**Upstream:** distributed as part of the [HorizonXI addons bundle](https://horizonxi.com/addons).
+**Upstream:** shipped in the [HorizonXI addon bundle](https://horizonxi.com/addons).
 The Ashita-v4 port is multi-platform (Windower v4 + Ashita v4) and shares lineage with
 [TeoTwawki/renamer](https://github.com/TeoTwawki/renamer).
 
-**Authors of the upstream addon:** `zach2good, TeoTwawki, atom0s` (per `addon.author` field).
+**Authors of the upstream addon:** `zach2good, TeoTwawki, atom0s` (per `addon.author`).
 
-**Our changes** (see `dynamic_entity_renamer.lua.diff`):
+**Baseline this patch targets:** the addon as shipped with the **HorizonXI 2.0**
+bundle (`addon.version = 1.0.0.0`, md5 `bf206fab99105bfe9fee16b6fe74f25f`).
+Patched result: md5 `3101e66d03125471cec55ad451e65f8e`.
 
-1. **Truthy-check fix on line 314.** Original: `if bit.band(flags, nameflag) and ...`.
-   In Lua, `bit.band` returns a number, and `0` is truthy — so this condition
-   matched ALL entities in the dynamic-range, polluting the registry with
-   entities that should never be renamed. Fixed to `~= 0`.
+> **Do not blind-copy `dynamic_entity_renamer.lua` over a newer upstream file.**
+> Upstream rewrote this addon in the 2.0 bundle. Overwriting it with a
+> pre-2.0 patched copy silently reverts upstream's own zone handling.
+> Use `scripts/patch-renamer.py`, which applies each fix only if missing.
 
-2. **Defensive guards in `setMobName`.** Original code called
-   `AshitaCore:GetMemoryManager():GetEntity():SetName(targid, new_name)`
-   unconditionally for every registered entity, every frame. On Wine this
-   faults whenever the entity slot is mid-init or has been reused after
-   despawn (Windows tolerates this silently via LFH heap behavior). Added:
-   - `GetActorPointer(targid) == 0` skip
-   - `GetSpawnFlags(targid) == 0` skip
-   - `GetName(targid) == new_name` skip (avoid redundant writes)
-   - Wrap final `SetName` in `pcall` as a last-resort guard
-
-3. **Zone-leave registry cleanup.** On `packet_in 0x0B` (zone leave), clear
-   `registry[zoneId]` to prevent transient BC/event entity entries from
-   accumulating across zone changes.
-
-4. **Render throttle to ~10 Hz.** Renaming doesn't need to run every frame;
-   reducing the call frequency proportionally reduces any residual fault
-   exposure.
-
-5. **1-second post-zoning settle window.** After `GetIsZoning()` returns to 0,
-   skip render for another second — the new zone's entities are still
-   streaming in and reading their fields can fault during that transient
-   window.
-
-Each change is a localized addition; none of the original logic was removed.
-
-## Reapplying after a HorizonXI launcher update
-
-If the HorizonXI launcher rewrites `dynamic_entity_renamer.lua` (e.g., because
-the upstream addon was updated), drop the patched file back in OR re-apply
-the diff:
+### Apply
 
 ```bash
-cd /path/to/addons/dynamic_entity_renamer
-patch -b dynamic_entity_renamer.lua < /path/to/dynamic_entity_renamer.lua.diff
+python3 scripts/patch-renamer.py "<GAME>/addons/dynamic_entity_renamer/dynamic_entity_renamer.lua"
+python3 scripts/patch-renamer.py --check  "<GAME>/..."   # report state, change nothing
+python3 scripts/patch-renamer.py --revert "<GAME>/..."   # restore .bak_upstream
 ```
 
-If upstream has changed enough that the diff doesn't apply cleanly, the
-individual changes above are small enough to re-apply by hand using the
-inline `+`/`-` markers in the .diff file as a guide.
+The script is idempotent, preserves the file's CRLF line endings, backs up the
+untouched upstream file to `.bak_upstream`, and byte-compiles the result with
+`luajit`/`luac` (reverting automatically if the patched file does not compile).
+
+`dynamic_entity_renamer.lua.diff` is the same change set in readable form, and
+`dynamic_entity_renamer.lua` is the fully-patched file — both are provided for
+reference and for the case where you want to inspect or hand-apply the changes.
+
+## The three fixes
+
+### 1. Truthy-check bug
+
+```lua
+-- upstream
+if bit.band(flags, nameflag) and targid >= 0x700 then
+-- patched
+if bit.band(flags, nameflag) ~= 0 and targid >= 0x700 then
+```
+
+`bit.band` returns a number, and in Lua `0` is truthy. The upstream condition
+therefore matched **every** entity in the dynamic range, not just the ones
+flagged for renaming, polluting the registry with entities that should never
+have been touched. This is a genuine bug on Windows too; it just doesn't crash
+there.
+
+### 2. Defensive guards in `setMobName`
+
+Upstream calls `GetEntity():SetName(targid, new_name)` unconditionally for every
+registered entity, every frame. On Wine this faults whenever the entity slot is
+mid-init or has been reused after a despawn — Windows tolerates the same reads
+silently via Low Fragmentation Heap behavior. Added, in order:
+
+- skip when `entity:GetActorPointer(targid) == 0` (slot empty / despawned)
+- skip when `entity:GetSpawnFlags(targid) == 0` (slot not fully spawned)
+- skip when `entity:GetName(targid) == new_name` (avoid redundant writes)
+- wrap the `SetName` call in `pcall` as a last-resort guard
+
+### 3. Render throttle to ~10 Hz
+
+Upstream drives `render()` from `d3d_beginscene`, i.e. every frame. Names do not
+need a 60+ Hz refresh; throttling to 10 Hz cuts the per-frame iteration cost and
+the residual fault exposure proportionally, with no visible difference.
+
+## Fixes that are no longer applied (upstream absorbed them)
+
+The May 2026 version of this patch also added a zone-leave registry cleanup and
+a 1-second post-zoning settle window. **Both are obsolete.** The 2.0 bundle's
+addon has its own `zoneState` table that queues `packet_in 0x0E` until the zone
+is stable and clears `name_list` on `packet_out 0x0A`. Re-adding the old
+versions would duplicate — and in the settle-window case, fight — upstream's
+handling.
+
+## When upstream changes again
+
+`patch-renamer.py` anchors on small, specific code fragments rather than line
+numbers, so it usually survives unrelated upstream edits. If an anchor stops
+matching, the script says which fix it could not apply and changes nothing else.
+In that case, re-apply that one fix by hand using the snippets above — the
+changes are small and localized, and none of them remove upstream logic.
+
+Re-run `--check` after every HorizonXI update; the launcher rewrites bundled
+addons. See [UPDATING.md](../UPDATING.md).

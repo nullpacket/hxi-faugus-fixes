@@ -38,5 +38,10 @@ TODO.local.md
 
 # Backups created by our own tooling on patched files
 *.bak_original
+*.bak_upstream
 *.bak_no_laa
 *.bak_winebuiltin
+
+# Local machine config - contains autologin credentials in plaintext.
+# Only the .example.json belongs in the repo.
+scripts/restore-config.json

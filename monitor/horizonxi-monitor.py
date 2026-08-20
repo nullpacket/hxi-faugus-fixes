@@ -20,29 +20,126 @@ import curses
 import hashlib
 import os
 import re
+import socket
 import sys
+import threading
 import time
 from collections import deque
 from pathlib import Path
 
 # --- Defaults (overridable via env vars) ----------------------------------
 
-LOG_PATH = Path(os.environ.get(
-    "HXI_MONITOR_LOG",
-    "/home/nullpacket/.config/faugus-launcher/logs/horizonxi/steam-0.log"))
+HOME = Path.home()
+
+
+def _first_existing(candidates, fallback):
+    """Pick the first candidate that exists, else `fallback`.
+
+    Faugus moved its state from ~/.config to ~/.local/share, and renamed the
+    per-game Wine log from steam-0.log to proton.log. Probing keeps the monitor
+    working on both old and new layouts without the user setting anything.
+    """
+    for c in candidates:
+        if c.exists():
+            return c
+    return fallback
+
+
+_LOG_CANDIDATES = [
+    HOME / ".local/share/faugus-launcher/logs/horizonxi/proton.log",
+    HOME / ".local/share/faugus-launcher/logs/horizonxi/steam-0.log",
+    HOME / ".config/faugus-launcher/logs/horizonxi/proton.log",
+    HOME / ".config/faugus-launcher/logs/horizonxi/steam-0.log",
+]
+
+LOG_PATH = Path(os.environ["HXI_MONITOR_LOG"]) if "HXI_MONITOR_LOG" in os.environ \
+    else _first_existing(_LOG_CANDIDATES, _LOG_CANDIDATES[0])
 CRASH_DIR = Path(os.environ.get(
     "HXI_MONITOR_CRASH_DIR",
     "/tmp/umu_crashreports"))
 D3D8_PATH = Path(os.environ.get(
     "HXI_MONITOR_D3D8",
-    "/home/nullpacket/Games/faugus/horizonxi/drive_c/windows/syswow64/d3d8.dll"))
+    str(HOME / "Games/faugus/horizonxi/drive_c/windows/syswow64/d3d8.dll")))
 D3D8TO9_MD5 = os.environ.get(
     "HXI_MONITOR_D3D8TO9_MD5",
     "f18148b1bc580a7b1f0df1f055782c31")
+# Comma-separated comm-field names to look for (kernel truncates to 15 chars).
+# Override via env: HXI_MONITOR_GAME_COMM=pol.exe,FFXi.exe
+GAME_COMMS = tuple(s.strip().lower() for s in os.environ.get(
+    "HXI_MONITOR_GAME_COMM",
+    "horizon-loader.,ashita-cli.exe,pol.exe,FFXi.exe,ffximain.exe"
+).split(",") if s.strip())
+
+# Optional ICMP-ping server-reachability probe. Uses /usr/bin/ping (unprivileged
+# ICMP, no raw sockets needed). We deliberately do NOT TCP-probe the game's port
+# because that would show as a connection attempt in server logs / rate limiters.
+# Set HXI_MONITOR_SERVER_HOST="" to disable the probe entirely.
+SERVER_HOST = os.environ.get("HXI_MONITOR_SERVER_HOST", "play.horizonxi.com")
+SERVER_INTERVAL = int(os.environ.get("HXI_MONITOR_SERVER_INTERVAL", "30"))
+SERVER_TIMEOUT = float(os.environ.get("HXI_MONITOR_SERVER_TIMEOUT", "2.0"))
 
 REFRESH_SECONDS = 1.0
 SPARKLINE_WIDTH = 60
 BLOCKS = " ▁▂▃▄▅▆▇█"
+
+
+# --- Server ICMP probe ----------------------------------------------------
+
+import subprocess  # noqa: E402
+
+class ServerProbe:
+    """Background thread that periodically pings SERVER_HOST and exposes the
+    most recent latency / loss status. Lock-free reads from the TUI side
+    (single-writer, snapshot-style updates).
+
+    Uses /usr/bin/ping (unprivileged ICMP DGRAM on modern Linux). Cheap: one
+    ICMP packet per SERVER_INTERVAL seconds. Does NOT contact the game's TCP
+    ports — that would show up as connection attempts in server-side logs.
+    """
+    def __init__(self):
+        self.last_check_wall = 0.0    # time.time() when we last finished a probe
+        self.latency_ms = None         # None=unknown, -1=down/timeout, else ms
+        self.error = None              # human-readable error msg if any
+        self.enabled = bool(SERVER_HOST)
+        if self.enabled:
+            self._thread = threading.Thread(target=self._loop, daemon=True)
+            self._thread.start()
+
+    def _loop(self):
+        # First probe immediately so the panel has data ASAP, then sleep loop.
+        while True:
+            self._probe()
+            time.sleep(SERVER_INTERVAL)
+
+    def _probe(self):
+        try:
+            r = subprocess.run(
+                ["ping", "-c", "1", "-W", str(int(SERVER_TIMEOUT)), SERVER_HOST],
+                capture_output=True, text=True,
+                timeout=SERVER_TIMEOUT + 1.0,
+            )
+            if r.returncode == 0:
+                m = re.search(r"time[=<]([\d.]+)\s*ms", r.stdout)
+                self.latency_ms = float(m.group(1)) if m else 0.0
+                self.error = None
+            else:
+                self.latency_ms = -1
+                self.error = "no reply" if r.returncode == 1 else f"ping rc={r.returncode}"
+        except subprocess.TimeoutExpired:
+            self.latency_ms = -1
+            self.error = "timeout"
+        except FileNotFoundError:
+            self.latency_ms = None
+            self.error = "ping cmd missing"
+        except Exception as e:
+            self.latency_ms = -1
+            self.error = str(e)[:40]
+        self.last_check_wall = time.time()
+
+    def age_seconds(self):
+        if self.last_check_wall == 0:
+            return None
+        return time.time() - self.last_check_wall
 
 
 # --- Log parsing ----------------------------------------------------------
@@ -274,19 +371,23 @@ class Metrics:
 
     @staticmethod
     def _find_game_pid():
-        """Find the actual FFXI render process by comm match.
+        """Find the FFXI render process by comm match.
 
-        HorizonXI's launch chain is:
-            faugus → Ashita-cli.exe (bootstrap) → horizon-loader.exe (game)
-        We want the game itself (where memory pressure shows up). Try
-        horizon-loader.exe first, then fall back to Ashita-cli.exe.
+        Different launch chains have different leaf processes:
+            HorizonXI:   Faugus → Ashita-cli.exe (bootstrap) → horizon-loader.exe
+            Retail FFXI: Faugus → pol.exe → (POL spawns the game process)
+        We want whichever process is currently the active candidate, picking
+        the highest-VmSize match if more than one comm hits (the launcher
+        bootstrap is typically tiny; the actual game is huge).
+
+        Candidates come from GAME_COMMS (env-overridable). Kernel truncates
+        comm to 15 chars, so e.g. "horizon-loader.exe" appears as
+        "horizon-loader.".
 
         NOTE: we DELIBERATELY do not read /proc/PID/cmdline for matching —
-        HorizonXI's loader has the user's password as a CLI arg, and reading
-        it here would risk surfacing it in logs/errors.
+        the FFXI loader passes credentials as CLI args.
         """
-        # comm field is truncated to 15 chars by the kernel ("horizon-loader.exe" → "horizon-loader.")
-        candidates = ("horizon-loader.", "ashita-cli.exe")
+        matches = []  # (vm_size_kb, pid, comm)
         for proc in Path("/proc").iterdir():
             if not proc.name.isdigit():
                 continue
@@ -294,10 +395,21 @@ class Metrics:
                 comm = (proc / "comm").read_text().strip()
             except OSError:
                 continue
-            for c in candidates:
-                if comm.lower() == c:
-                    return int(proc.name), comm
-        return None, None
+            if comm.lower() not in GAME_COMMS:
+                continue
+            vm = 0
+            try:
+                for line in (proc / "status").read_text().splitlines():
+                    if line.startswith("VmSize:"):
+                        vm = int(line.split()[1])
+                        break
+            except (OSError, ValueError, IndexError):
+                pass
+            matches.append((vm, int(proc.name), comm))
+        if not matches:
+            return None, None
+        matches.sort(reverse=True)  # highest VmSize first
+        return matches[0][1], matches[0][2]
 
     def vm_size_delta_kb_per_min(self):
         """Returns rate of VM size change in KB/min over the last ~60s of history.
@@ -369,7 +481,7 @@ def fmt_kb(kb):
     return f"{gb:.2f} GB"
 
 
-def draw(stdscr, m):
+def draw(stdscr, m, probe=None):
     stdscr.erase()
     h, w = stdscr.getmaxyx()
     if h < 18 or w < 70:
@@ -410,7 +522,30 @@ def draw(stdscr, m):
     stdscr.addstr(fmt_duration(m.session_duration()), BOLD)
     stdscr.addstr(f"   Log: {fmt_filesize(LOG_PATH)}   syswow64 d3d8: ")
     stdscr.addstr(d3d8_str, d3d8_attr | BOLD)
-    row += 2
+    row += 1
+
+    # Server reachability (ICMP probe) — small status line, only if enabled
+    if probe is not None and probe.enabled:
+        stdscr.addstr(row, 2, "Server:  ")
+        if probe.latency_ms is None:
+            stdscr.addstr(f"{SERVER_HOST}", DIM)
+            stdscr.addstr("  probing...", DIM)
+        elif probe.latency_ms < 0:
+            stdscr.addstr(f"{SERVER_HOST}", BOLD)
+            stdscr.addstr("  DOWN", RED | BOLD)
+            if probe.error:
+                stdscr.addstr(f"  ({probe.error})", RED)
+        else:
+            lat_attr = (RED | BOLD if probe.latency_ms > 200 else
+                        YELLOW if probe.latency_ms > 100 else GREEN)
+            stdscr.addstr(f"{SERVER_HOST}", BOLD)
+            stdscr.addstr("  ")
+            stdscr.addstr(f"{probe.latency_ms:.0f}ms", lat_attr | BOLD)
+            age = probe.age_seconds()
+            if age is not None:
+                stdscr.addstr(f"  (last ping {int(age)}s ago)", DIM)
+        row += 1
+    row += 1
 
     # Section: Critical
     stdscr.addstr(row, 0, "- Critical ".ljust(w, "-"), CYAN)
@@ -531,6 +666,7 @@ def main(stdscr):
     stdscr.timeout(int(REFRESH_SECONDS * 1000))
 
     m = Metrics()
+    probe = ServerProbe()
 
     while True:
         m.ingest()
@@ -539,7 +675,7 @@ def main(stdscr):
         m.check_d3d8()
         m.update_game_memory()
         try:
-            draw(stdscr, m)
+            draw(stdscr, m, probe)
         except curses.error:
             pass  # terminal resize race
 
