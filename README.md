@@ -77,6 +77,8 @@ hxi-faugus-fixes/
 ├── INSTALL.md                      ← step-by-step apply instructions
 ├── UPDATING.md                     ← what a HorizonXI update breaks, and how to restore it
 ├── CHANGELOG.md                    ← what changed between bundle revisions
+├── AGENTS.md                       ← instructions for AI assistants (any vendor)
+├── CLAUDE.md                       ← pointer to AGENTS.md for Claude Code
 ├── scripts/
 │   ├── apply-laa.py                ← LAA patcher (idempotent, --check / --revert)
 │   ├── patch-renamer.py            ← addon patcher (idempotent, survives upstream rewrites)

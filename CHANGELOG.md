@@ -44,6 +44,11 @@ layout change. **If you installed this before August 2026, re-read
   `HORIZON_PLUGINS` / `HORIZON_ADDONS` blocks in `default.txt`. Config-driven so
   no credentials live in the script; `restore-config.json` is gitignored.
 - `UPDATING.md` — what a HorizonXI update reverts and how to restore it.
+- `AGENTS.md` (+ a `CLAUDE.md` pointer) — instructions for AI assistants of any
+  vendor helping a user with this repo: run the verifier first, the hard rules
+  that cause real damage if got wrong, credential handling, how to read the logs
+  without raising false alarms on normal LuaJIT exceptions, and the settled
+  negative results not to re-propose.
 - `patches/ADDON-REVIEW.md` — review notes for the `dynamic_entity_renamer`
   patch, written for server staff and for players deciding whether to run a
   modified copy of a server-distributed addon. Documents where the addon's data
