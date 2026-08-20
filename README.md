@@ -10,7 +10,7 @@
 - **It modifies your game install.** The steps patch a client executable, replace a system DLL inside your Wine prefix, and edit a HorizonXI-distributed addon. Every step is reversible and documented, but you are changing files the launcher expects to own.
 - **I am not responsible for the outcome.** If your game stops launching, your install breaks, your prefix needs rebuilding, you lose progress, or your account is actioned or banned — that is on you, not on me. Back up anything you care about before you start.
 - **Read `patches/ADDON-REVIEW.md` before you run the addon patch.** It documents exactly what that change does and does not affect. It is written so that you — or a server admin — can judge it for yourself rather than take my word for it. Whether running a modified copy of a server-distributed addon is acceptable is **HorizonXI's call, not mine**, and they have not made one.
-- **If in doubt, ask HorizonXI staff first.** If they say don't, then don't — and please [open an issue](../../issues) so this repository can be corrected or taken down.
+- **If in doubt, ask HorizonXI staff first.** If they say don't, then don't.
 
 No warranty of any kind is offered; see [LICENSE](LICENSE).
 
