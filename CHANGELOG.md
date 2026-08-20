@@ -51,6 +51,17 @@ layout change. **If you installed this before August 2026, re-read
 
 ### Changed
 
+- **Nothing is hardcoded to a particular user or install path any more.** Every
+  script resolves paths as flag > environment variable > `$HOME`-relative
+  default (`HXI_PREFIX`, `HXI_GAME_DIR`, `HXI_GAMES_JSON`, `HXI_LOG`,
+  `HXI_RESTORE_CONFIG`), and `restore-config.json` expands `~` and `$VARS` in
+  its values so one config file is portable between machines.
+- `scripts/faugus-horizonxi.bat` — now self-locating. It derives the game
+  directory from `%~dp0` and the Windows directory from `%SystemRoot%` instead
+  of hardcoding `C:\Program Files\HorizonXI\Game`, so it needs no editing on a
+  non-default install, and warns instead of silently proceeding if `d3d8.dll`
+  is missing next to it. Verified under a throwaway Wine prefix, including a
+  path containing spaces.
 - `monitor/horizonxi-monitor.py` — synced with the newer working copy, adding
   the server-reachability ping and configurable game process names. Default
   paths no longer hardcode a home directory, and the log path probes the new

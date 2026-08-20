@@ -17,13 +17,33 @@ Step-by-step recipe. Apply in order. Each step has verification, and
 Throughout this guide, replace `<PREFIX>` with your Wine prefix and `<GAME>`
 with your game directory inside it. Stock Faugus defaults:
 
-| | |
-|---|---|
-| `<PREFIX>` | `~/Games/faugus/horizonxi` |
-| `<GAME>` | `<PREFIX>/drive_c/Program Files/HorizonXI/Game` |
-| Faugus game config | `~/.local/share/faugus-launcher/games.json` |
-| Faugus app config | `~/.config/faugus-launcher/config.json` |
-| Wine log | `~/.local/share/faugus-launcher/logs/horizonxi/proton.log` |
+| | Default | Environment variable |
+|---|---|---|
+| `<PREFIX>` | `$HOME/Games/faugus/horizonxi` | `HXI_PREFIX` |
+| `<GAME>` | `<PREFIX>/drive_c/Program Files/HorizonXI/Game` | `HXI_GAME_DIR` |
+| Faugus game config | `$HOME/.local/share/faugus-launcher/games.json` | `HXI_GAMES_JSON` |
+| Faugus app config | `$HOME/.config/faugus-launcher/config.json` | — |
+| Wine log | `$HOME/.local/share/faugus-launcher/logs/horizonxi/proton.log` | `HXI_LOG` |
+
+**None of the scripts hardcode an install path or a username.** Defaults are
+resolved relative to `$HOME` at runtime, and every one can be overridden by the
+environment variable above or by a command-line flag (flag wins over env var,
+env var wins over default). So on a non-standard install you can either export
+the variables once:
+
+```bash
+export HXI_PREFIX=/games/prefixes/horizonxi
+export HXI_GAME_DIR="$HXI_PREFIX/drive_c/Program Files/HorizonXI/Game"
+```
+
+…or pass them per-invocation:
+
+```bash
+python3 scripts/verify-install.py --prefix /games/prefixes/horizonxi
+```
+
+Setting them in your shell profile makes every command in this guide work
+as written.
 
 > **Note on paths.** Faugus moved its state from `~/.config/faugus-launcher/` to
 > `~/.local/share/faugus-launcher/`, and the per-game Wine log is now
@@ -67,8 +87,11 @@ md5sum "<GAME>/d3d8.dll"
 # Expected: f18148b1bc580a7b1f0df1f055782c31
 ```
 
-If your game is installed somewhere other than
-`C:\Program Files\HorizonXI\Game`, edit the two paths inside the `.bat` to match.
+The `.bat` needs no editing regardless of where you installed the game: it
+derives its own directory from `%~dp0` and the Windows directory from
+`%SystemRoot%`, so it works from whatever path it sits in — as long as it stays
+in the same folder as `d3d8.dll` and `Ashita-cli.exe`. If `d3d8.dll` is missing
+it prints a warning and still launches the game rather than failing silently.
 
 ## Step 3 — Wire the bat wrapper into Faugus
 

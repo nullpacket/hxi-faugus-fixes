@@ -3,7 +3,16 @@
     "Copy this file to restore-config.json (gitignored) and edit for your install.",
     "Every section is optional - delete what you do not want restored.",
     "Credentials are stored in plaintext here, exactly as ashita.ini stores them;",
-    "keep the file mode at 600 and do not commit it."
+    "keep the file mode at 600 and do not commit it.",
+    "",
+    "game_dir accepts ~ and $VARS, e.g. \"$HOME/Games/faugus/horizonxi/...\" or",
+    "\"$STEAM_LIBRARY/...\". It can also be omitted entirely, in which case the",
+    "HXI_GAME_DIR environment variable is used, then the stock Faugus default",
+    "shown below. The --game-dir flag overrides all of them.",
+    "",
+    "pivot_root_path is a path INSIDE the Wine prefix (a C:\\ path as the game",
+    "sees it), so it does not change between machines unless you installed the",
+    "game somewhere other than C:\\Program Files\\HorizonXI."
   ],
 
   "game_dir": "~/Games/faugus/horizonxi/drive_c/Program Files/HorizonXI/Game",

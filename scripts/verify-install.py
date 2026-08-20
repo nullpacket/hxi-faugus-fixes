@@ -9,11 +9,19 @@ Usage:
     verify-install.py
     verify-install.py --game-dir "<path>" --prefix "<path>"
 
-Defaults match a stock Faugus install:
-    prefix    ~/Games/faugus/horizonxi
-    game dir  <prefix>/drive_c/Program Files/HorizonXI/Game
-    games.json ~/.local/share/faugus-launcher/games.json
-    log        ~/.local/share/faugus-launcher/logs/horizonxi/proton.log
+Paths resolve in this order: command-line flag, then environment variable, then
+the stock Faugus default (relative to $HOME - nothing is hardcoded to a
+particular user or install location).
+
+    flag           env var          default
+    --prefix       HXI_PREFIX       $HOME/Games/faugus/horizonxi
+    --game-dir     HXI_GAME_DIR     <prefix>/drive_c/Program Files/HorizonXI/Game
+    --games-json   HXI_GAMES_JSON   $HOME/.local/share/faugus-launcher/games.json
+    --log          HXI_LOG          $HOME/.local/share/faugus-launcher/logs/horizonxi/proton.log
+
+So a non-standard install needs no edits, e.g.:
+
+    HXI_PREFIX=/games/prefixes/hxi python3 verify-install.py
 
 Exit status is 1 if any check FAILs, 0 otherwise.
 """
@@ -88,7 +96,7 @@ def check_d3d8(game, prefix):
     report("PASS" if bat.is_file() else "FAIL", "bat wrapper present", str(bat.name))
 
 
-def check_games_json(path, game):
+def check_games_json(path):
     if not path.is_file():
         return report("FAIL", "Faugus games.json", f"not found at {path}")
     try:
@@ -193,13 +201,17 @@ def check_log(log):
 
 def main():
     home = Path.home()
+    # Flag > env var > $HOME-relative default. Nothing is tied to a specific
+    # user or install path.
+    faugus = home / ".local/share/faugus-launcher"
     p = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
-    p.add_argument("--prefix", default=str(home / "Games/faugus/horizonxi"))
-    p.add_argument("--game-dir", default=None)
-    p.add_argument("--games-json",
-                   default=str(home / ".local/share/faugus-launcher/games.json"))
-    p.add_argument("--log",
-                   default=str(home / ".local/share/faugus-launcher/logs/horizonxi/proton.log"))
+    p.add_argument("--prefix", default=os.environ.get(
+        "HXI_PREFIX", str(home / "Games/faugus/horizonxi")))
+    p.add_argument("--game-dir", default=os.environ.get("HXI_GAME_DIR"))
+    p.add_argument("--games-json", default=os.environ.get(
+        "HXI_GAMES_JSON", str(faugus / "games.json")))
+    p.add_argument("--log", default=os.environ.get(
+        "HXI_LOG", str(faugus / "logs/horizonxi/proton.log")))
     args = p.parse_args()
 
     prefix = Path(os.path.expanduser(args.prefix))
@@ -216,7 +228,7 @@ def main():
     check_d3d8(game, prefix)
     check_renamer(game)
     print("\nFaugus wiring")
-    check_games_json(Path(os.path.expanduser(args.games_json)), game)
+    check_games_json(Path(os.path.expanduser(args.games_json)))
     print("\nConfig that updates revert")
     check_ini(game)
     print("\nLast session's log")

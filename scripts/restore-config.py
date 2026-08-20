@@ -22,6 +22,17 @@ Usage:
     restore-config.py                       # use ./restore-config.json
     restore-config.py --config PATH         # use a different config file
     restore-config.py --dry-run             # report what would change
+
+Paths resolve as flag > env var > config file > $HOME-relative default:
+
+    flag        env var             default
+    --config    HXI_RESTORE_CONFIG  <this script's dir>/restore-config.json
+    --game-dir  HXI_GAME_DIR        the config file's "game_dir", else
+                                    $HOME/Games/faugus/horizonxi/drive_c/
+                                        Program Files/HorizonXI/Game
+
+"~" and environment variables inside config values are expanded, so a config
+file is portable between machines.
 """
 
 import argparse
@@ -31,10 +42,19 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CONFIG = os.path.join(HERE, "restore-config.json")
+DEFAULT_CONFIG = os.environ.get("HXI_RESTORE_CONFIG",
+                                os.path.join(HERE, "restore-config.json"))
+DEFAULT_GAME_DIR = os.path.join(
+    os.path.expanduser("~"),
+    "Games", "faugus", "horizonxi", "drive_c", "Program Files", "HorizonXI", "Game")
 
 
-def load_config(path):
+def expand(path):
+    """Expand ~ and $VARS so config values are portable between machines."""
+    return os.path.expanduser(os.path.expandvars(path))
+
+
+def load_config(path, game_dir_override=None):
     if not os.path.isfile(path):
         sys.exit(
             f"error: no config file at {path}\n"
@@ -43,7 +63,12 @@ def load_config(path):
         )
     with open(path) as fh:
         cfg = json.load(fh)
-    cfg["game_dir"] = os.path.expanduser(cfg["game_dir"])
+
+    # Flag > env var > config file > $HOME-relative default.
+    cfg["game_dir"] = expand(game_dir_override
+                             or os.environ.get("HXI_GAME_DIR")
+                             or cfg.get("game_dir")
+                             or DEFAULT_GAME_DIR)
     if not os.path.isdir(cfg["game_dir"]):
         sys.exit(f"error: game_dir not found: {cfg['game_dir']}")
     return cfg
@@ -201,11 +226,13 @@ def main():
     p = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     p.add_argument("--config", default=DEFAULT_CONFIG,
                    help="path to restore-config.json (default: next to this script)")
+    p.add_argument("--game-dir", default=None,
+                   help="override the config file's game_dir")
     p.add_argument("--dry-run", action="store_true",
                    help="report what would change without writing")
     args = p.parse_args()
 
-    cfg = load_config(args.config)
+    cfg = load_config(expand(args.config), args.game_dir)
 
     changes = (restore_pivot(cfg, args.dry_run)
                + restore_sandbox(cfg, args.dry_run)
