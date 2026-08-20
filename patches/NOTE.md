@@ -1,5 +1,11 @@
 # patches/
 
+> **Reviewing this patch for a server, or deciding whether to trust it?**
+> Read [ADDON-REVIEW.md](ADDON-REVIEW.md). It covers what the addon does, where
+> its data comes from, exactly what the three changes affect, and why the
+> patched addon can only ever display a subset of what the unpatched one does.
+> This file is the implementation-level companion to it.
+
 ## dynamic_entity_renamer.lua
 
 **Upstream:** shipped in the [HorizonXI addon bundle](https://horizonxi.com/addons).
@@ -87,3 +93,12 @@ changes are small and localized, and none of them remove upstream logic.
 
 Re-run `--check` after every HorizonXI update; the launcher rewrites bundled
 addons. See [UPDATING.md](../UPDATING.md).
+
+## Redistribution
+
+`dynamic_entity_renamer.lua` here is a derived copy of a HorizonXI-distributed
+file, included so the change can be reviewed and reproduced. If HorizonXI staff
+would prefer it not be redistributed, both the `.lua` and the `.diff` can be
+removed — `scripts/patch-renamer.py` ships none of upstream's code and patches
+whatever copy the player already installed from the official bundle. See
+[ADDON-REVIEW.md](ADDON-REVIEW.md) §7.

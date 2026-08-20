@@ -71,6 +71,7 @@ hxi-faugus-fixes/
 ├── patches/
 │   ├── dynamic_entity_renamer.lua        ← patched file, for reference
 │   ├── dynamic_entity_renamer.lua.diff   ← readable diff vs the 2.0 upstream
+│   ├── ADDON-REVIEW.md                   ← review notes: scope, behaviour, fairness
 │   └── NOTE.md                           ← what each change does and why
 ├── bin/
 │   ├── d3d8.dll                    ← d3d8to9 v1.15.1 (crosire's release, unmodified)
@@ -106,7 +107,7 @@ This bundle is unaffiliated with any of the projects below — but none of it wo
 - **[Ashita v4](https://www.ashitaxi.com/)** ([source](https://github.com/AshitaXI/Ashita)) by the Ashita Development Team — the FFXI client framework that hosts the Lua addons; the addon patch uses its `IEntity` API (`GetActorPointer`, `GetSpawnFlags`, `GetName`)
 
 **The addon we patched** (in `patches/`):
-- `dynamic_entity_renamer.lua` — authored by **zach2good, TeoTwawki, atom0s**, distributed as part of the HorizonXI addon bundle. The Ashita-v4 port shares lineage with TeoTwawki's [`renamer`](https://github.com/TeoTwawki/renamer) addon family. Our patch is purely defensive — see `patches/dynamic_entity_renamer.lua.diff` for the exact changes.
+- `dynamic_entity_renamer.lua` — authored by **zach2good, TeoTwawki, atom0s**, distributed as part of the HorizonXI addon bundle. The Ashita-v4 port shares lineage with TeoTwawki's [`renamer`](https://github.com/TeoTwawki/renamer) addon family. Our patch is purely defensive — see [`patches/ADDON-REVIEW.md`](patches/ADDON-REVIEW.md) for a full account of what it changes, and `patches/dynamic_entity_renamer.lua.diff` for the exact lines.
 
 **The d3d8 wrapper** (in `bin/`):
 - **[d3d8to9](https://github.com/crosire/d3d8to9)** by **crosire** — translates D3D8 calls to D3D9. We bundle the official v1.15.1 release unmodified; see `bin/SOURCE.txt` for the upstream URL and checksum.

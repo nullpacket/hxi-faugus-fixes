@@ -44,6 +44,14 @@ layout change. **If you installed this before August 2026, re-read
   `HORIZON_PLUGINS` / `HORIZON_ADDONS` blocks in `default.txt`. Config-driven so
   no credentials live in the script; `restore-config.json` is gitignored.
 - `UPDATING.md` — what a HorizonXI update reverts and how to restore it.
+- `patches/ADDON-REVIEW.md` — review notes for the `dynamic_entity_renamer`
+  patch, written for server staff and for players deciding whether to run a
+  modified copy of a server-distributed addon. Documents where the addon's data
+  comes from (server packets `0x1FF` and `0x0E`), what each change affects, and
+  the subset property: the patched addon can only ever display a subset of what
+  the unpatched one displays, with identical names. Also records that the patch
+  can be shipped as the patcher script alone if redistributing upstream's file
+  is unwelcome.
 - Coverage of the 2.0-era launch failures that aren't Wine bugs at all: the
   `pivot.ini` `root_path` reset ("logs in then closes after ~5s") and
   `use_interface_bypass` (game-data update breaks the PlayOnline version check).

@@ -150,7 +150,11 @@ python3 scripts/patch-renamer.py --check "<GAME>/addons/.../dynamic_entity_renam
 
 **Revert:** `python3 scripts/patch-renamer.py --revert "<GAME>/addons/.../dynamic_entity_renamer.lua"`
 
-See [patches/NOTE.md](patches/NOTE.md) for what each fix does and why.
+[patches/NOTE.md](patches/NOTE.md) explains what each fix does at the code
+level. [patches/ADDON-REVIEW.md](patches/ADDON-REVIEW.md) is the document to
+read — or to hand to a server admin — if you want to know exactly what the
+patch does and does not affect before running a modified copy of a
+server-distributed addon.
 
 ## Step 5 — Check the settings that updates revert
 
