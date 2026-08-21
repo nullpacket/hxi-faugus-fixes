@@ -92,8 +92,11 @@ unzip -o -j "<HorizonXI>/Downloads/HorizonXI-2_0_1.zip" "plugins/<Name>.dll" -d 
 - `<GAME>/logs/*.txt` — Ashita's own log. Compare a failing run against your
   last good one; first-vs-last timestamp shows session length, so a good session
   is hours and a failure is ~5 seconds.
-- `~/.local/share/faugus-launcher/logs/horizonxi/proton.log` — the Wine log. The
-  `Proton:` line reveals the runner **actually** used, which can differ from what
+- `~/.local/share/faugus-launcher/logs/horizonxi/` — the Wine log. **Faugus does not
+  use a stable filename here**: it has written `proton.log` on one launch and
+  `steam-default.log` on the next, in the same install. Take the newest file rather
+  than hardcoding a name (`verify-install.py` and the monitor both probe by mtime).
+  The `Proton:` line reveals the runner **actually** used, which can differ from what
   `games.json` says.
 - `~/.local/share/faugus-launcher/games-backup/*.json` — timestamped runner
   history, good for distinguishing "an update changed this" from "I changed it
