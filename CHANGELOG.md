@@ -39,10 +39,12 @@ layout change. **If you installed this before August 2026, re-read
   d3d8to9 in both locations, bat wrapper, addon patch, Faugus wiring, pivot and
   sandbox config, last session's log counters). Non-zero exit on any failure.
 - `scripts/restore-config.py` + `restore-config.example.json` — re-applies the
-  config a HorizonXI update reverts: pivot `root_path`, autologin,
-  `[ffxi.registry]` display settings, `use_interface_bypass`, and the
-  `HORIZON_PLUGINS` / `HORIZON_ADDONS` blocks in `default.txt`. Config-driven so
-  no credentials live in the script; `restore-config.json` is gitignored.
+  config a HorizonXI update reverts: pivot `root_path` and the `[overlays]` DAT
+  list, autologin, `[ffxi.registry]` display settings, `use_interface_bypass`,
+  and the `HORIZON_PLUGINS` / `HORIZON_ADDONS` blocks in `default.txt`.
+  Config-driven so no credentials live in the script; `restore-config.json` is
+  gitignored. The overlay list is renumbered `0..N` on write — a gap in the keys
+  may silently drop every overlay after it.
 - `UPDATING.md` — what a HorizonXI update reverts and how to restore it.
 - `AGENTS.md` (+ a `CLAUDE.md` pointer) — instructions for AI assistants of any
   vendor helping a user with this repo: run the verifier first, the hard rules

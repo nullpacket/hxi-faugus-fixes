@@ -19,6 +19,23 @@
 
   "pivot_root_path": "C:\\Program Files\\HorizonXI\\Game\\polplugins\\DATs",
 
+  "_pivot_overlays_comment": [
+    "The DAT overlay list, rewritten to the full stock set by every update.",
+    "Listed in priority order and renumbered 0..N automatically - never leave a",
+    "gap in the keys, as it is unconfirmed whether pivot's parser stops at a",
+    "missing index. Omit this key entirely to leave [overlays] alone.",
+    "Heavy texture overlays (e.g. an HD pack) cost significant FPS in crowded",
+    "areas; dropping one here is config-only and instantly reversible."
+  ],
+  "pivot_overlays": [
+    "xiview",
+    "horizonoverrides",
+    "4.ffxi-maps (jova .dat maps)",
+    "2.ffxi-maps (notated .dats)",
+    "horizonmaps",
+    "remapster"
+  ],
+
   "sandbox_interface_bypass": true,
 
   "autologin": {

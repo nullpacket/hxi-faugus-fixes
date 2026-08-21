@@ -94,23 +94,47 @@ def newline_of(text):
 
 
 def restore_pivot(cfg, dry_run):
-    """pivot.ini root_path. An update resets this to Horizon's default install
-    path; every overlay then logs '=> failed' and the game exits ~5s after login."""
+    """pivot.ini root_path and the [overlays] list.
+
+    An update resets root_path to Horizon's default install path; every overlay
+    then logs '=> failed' and the game exits ~5s after login.
+
+    It also restores the full stock overlay list. That is not fatal, but heavy
+    texture overlays cost a lot of FPS in crowded areas, so the desired list is
+    managed here too."""
     path = os.path.join(cfg["game_dir"], "config", "pivot", "pivot.ini")
     if not os.path.isfile(path):
         return []
-    want = cfg.get("pivot_root_path")
-    if not want:
-        return []
     text = read(path)
-    # lambda replacement: the value is a Windows path, and re.sub would treat its
-    # backslashes as escape sequences in a plain replacement string.
-    new = re.sub(r"^root_path=[^\r\n]*", lambda _: "root_path=" + want,
-                 text, count=1, flags=re.M)
-    if new == text:
-        return []
-    write(path, new, dry_run)
-    return ["pivot_root"]
+    changes = []
+
+    want = cfg.get("pivot_root_path")
+    if want:
+        # lambda replacement: the value is a Windows path, and re.sub would treat
+        # its backslashes as escape sequences in a plain replacement string.
+        new = re.sub(r"^root_path=[^\r\n]*", lambda _: "root_path=" + want,
+                     text, count=1, flags=re.M)
+        if new != text:
+            text = new
+            changes.append("pivot_root")
+
+    overlays = cfg.get("pivot_overlays")
+    if overlays is not None:
+        head, sep, tail = text.partition("[overlays]")
+        if sep:
+            newline = newline_of(text)
+            # Renumber from 0 with no gaps. Whether pivot's parser stops at a
+            # missing index is unconfirmed, so a gap could silently drop every
+            # overlay after it.
+            body = newline + newline.join("%d=%s" % (i, n)
+                                          for i, n in enumerate(overlays)) + newline
+            if tail != body:
+                text = head + sep + body
+                changes.append("pivot_overlays(%d)" % len(overlays))
+
+    if changes:
+        write(path, text, dry_run)
+    return changes
 
 
 def restore_sandbox(cfg, dry_run):

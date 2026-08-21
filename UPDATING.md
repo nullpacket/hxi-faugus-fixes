@@ -22,6 +22,7 @@ Every one of those is idempotent, so running them when nothing broke is a no-op.
 | Reverted | Symptom | Restored by |
 |---|---|---|
 | `config/pivot/pivot.ini` → `root_path=C:\Games\HorizonXI\polplugins\DATs` | **Game logs in then closes after ~5s.** Horizon's default install path, not a Faugus one. All overlays log `=> failed`, then a clean `UninstallAshita` — no crash, no dump | `restore-config.py` |
+| `config/pivot/pivot.ini` `[overlays]` → full stock list | Not a crash. But a large texture overlay costs a lot of FPS in crowded areas, so a list you trimmed comes back | `restore-config.py` (`pivot_overlays`) |
 | `config/boot/ashita.ini` → `command = --server play.horizonxi.com` | Autologin gone; stops at the login prompt | `restore-config.py` |
 | `config/boot/ashita.ini` `[ffxi.registry]` | Resolution reset to 1920x1080 | `restore-config.py` |
 | `scripts/default.txt` `HORIZON_*` blocks → stock minimal | luashitacast, addons and plugins stop loading. Your custom-user section outside the markers survives | `restore-config.py` |
