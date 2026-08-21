@@ -98,3 +98,30 @@ unzip -o -j "<HorizonXI>/Downloads/HorizonXI-2_0_1.zip" "plugins/<Name>.dll" -d 
 - `~/.local/share/faugus-launcher/games-backup/*.json` — timestamped runner
   history, good for distinguishing "an update changed this" from "I changed it
   while troubleshooting".
+
+## GPU clock lock (not update-related, but it resets on every reboot)
+
+NVIDIA's driver leaves the GPU in its P8 idle power state during FFXI — a 2002 game's
+small, bursty submissions never look like enough load to trigger a clock ramp. The card
+sits at ~300 MHz while you play, which cost ~35% of crowd framerate on the machine this
+was measured on.
+
+```bash
+sudo nvidia-smi -lgc 1500,3135     # apply now (until reboot)
+sudo nvidia-smi -rgc               # revert
+```
+
+`nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1'` is **not** a substitute — it reports
+success, the clocks rise for about a second, then the driver silently resets the attribute
+to 0.
+
+To apply it automatically at boot:
+
+```bash
+sudo install -m644 scripts/nvidia-clock-lock.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now nvidia-clock-lock.service
+```
+
+Check with `nvidia-smi --query-gpu=pstate,clocks.current.graphics --format=csv,noheader`
+while the game runs — you want >=1500 MHz, not P8.

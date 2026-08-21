@@ -1,0 +1,15 @@
+[Unit]
+Description=Lock NVIDIA GPU clock floor (stops P8 idle clocks starving old/low-submission games)
+Documentation=https://github.com/nullpacket/hxi-faugus-fixes
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Retry: the nvidia driver may not be ready the instant this unit runs.
+ExecStart=/bin/sh -c 'for i in 1 2 3 4 5 6 7 8 9 10; do /usr/bin/nvidia-smi -lgc 1500,3135 && exit 0; sleep 3; done; exit 1'
+ExecStop=/usr/bin/nvidia-smi -rgc
+
+[Install]
+WantedBy=multi-user.target
