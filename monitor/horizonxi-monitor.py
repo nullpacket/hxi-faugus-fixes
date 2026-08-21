@@ -45,15 +45,25 @@ def _first_existing(candidates, fallback):
     return fallback
 
 
-_LOG_CANDIDATES = [
-    HOME / ".local/share/faugus-launcher/logs/horizonxi/proton.log",
-    HOME / ".local/share/faugus-launcher/logs/horizonxi/steam-0.log",
-    HOME / ".config/faugus-launcher/logs/horizonxi/proton.log",
-    HOME / ".config/faugus-launcher/logs/horizonxi/steam-0.log",
+_LOG_NAMES = ["steam-default.log", "proton.log", "steam-0.log"]
+_LOG_DIRS = [
+    HOME / ".local/share/faugus-launcher/logs/horizonxi",
+    HOME / ".config/faugus-launcher/logs/horizonxi",
 ]
+# Faugus does not use a stable log filename - it has been observed writing
+# proton.log on one launch and steam-default.log on the next, in the same
+# install. Probe by mtime so we always tail the newest, rather than silently
+# reporting "no log" because a hardcoded name went stale.
+_LOG_CANDIDATES = [d / n for d in _LOG_DIRS for n in _LOG_NAMES]
+
+
+def _newest_log():
+    live = [p for p in _LOG_CANDIDATES if p.exists()]
+    return max(live, key=lambda p: p.stat().st_mtime) if live else _LOG_CANDIDATES[0]
+
 
 LOG_PATH = Path(os.environ["HXI_MONITOR_LOG"]) if "HXI_MONITOR_LOG" in os.environ \
-    else _first_existing(_LOG_CANDIDATES, _LOG_CANDIDATES[0])
+    else _newest_log()
 CRASH_DIR = Path(os.environ.get(
     "HXI_MONITOR_CRASH_DIR",
     "/tmp/umu_crashreports"))

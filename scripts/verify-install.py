@@ -17,7 +17,8 @@ particular user or install location).
     --prefix       HXI_PREFIX       $HOME/Games/faugus/horizonxi
     --game-dir     HXI_GAME_DIR     <prefix>/drive_c/Program Files/HorizonXI/Game
     --games-json   HXI_GAMES_JSON   $HOME/.local/share/faugus-launcher/games.json
-    --log          HXI_LOG          $HOME/.local/share/faugus-launcher/logs/horizonxi/proton.log
+    --log          HXI_LOG          newest of steam-default.log / proton.log /
+                                    steam-0.log under the Faugus log dir
 
 So a non-standard install needs no edits, e.g.:
 
@@ -177,6 +178,21 @@ def check_ini(game):
                "not 1 - a game-data update can then break launching")
 
 
+def newest_log(explicit):
+    """Faugus has no stable log filename - proton.log on one launch,
+    steam-default.log on the next. Probe by mtime instead of trusting one name,
+    or the log checks silently SKIP forever."""
+    if explicit:
+        return Path(os.path.expanduser(explicit))
+    home = Path.home()
+    cands = [d / n
+             for d in (home / ".local/share/faugus-launcher/logs/horizonxi",
+                       home / ".config/faugus-launcher/logs/horizonxi")
+             for n in ("steam-default.log", "proton.log", "steam-0.log")]
+    live = [p for p in cands if p.is_file()]
+    return max(live, key=lambda p: p.stat().st_mtime) if live else cands[0]
+
+
 def check_log(log):
     if not log.is_file():
         return report("SKIP", "Wine log counters", f"no log at {log}")
@@ -210,8 +226,7 @@ def main():
     p.add_argument("--game-dir", default=os.environ.get("HXI_GAME_DIR"))
     p.add_argument("--games-json", default=os.environ.get(
         "HXI_GAMES_JSON", str(faugus / "games.json")))
-    p.add_argument("--log", default=os.environ.get(
-        "HXI_LOG", str(faugus / "logs/horizonxi/proton.log")))
+    p.add_argument("--log", default=os.environ.get("HXI_LOG"))
     args = p.parse_args()
 
     prefix = Path(os.path.expanduser(args.prefix))
@@ -232,7 +247,7 @@ def main():
     print("\nConfig that updates revert")
     check_ini(game)
     print("\nLast session's log")
-    check_log(Path(os.path.expanduser(args.log)))
+    check_log(newest_log(args.log))
 
     fails = results.count("FAIL")
     warns = results.count("WARN")
